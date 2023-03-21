@@ -18,14 +18,16 @@ func validateIfKey1False(value map[string]bool) bool {
 	return key
 }
 
-func validateIfKey1FalseChannel(value map[string]bool, channel chan bool, exit chan bool) {
+func validateIfKey1FalseChannel(value map[string]bool, channel chan bool) {
 	time.Sleep(1 * time.Second)
 	key, ok := value["1"]
 	if !ok {
-		exit <- false
+		channel <- false
+		return
 	}
 	if !key {
-		exit <- false
+		channel <- false
+		return
 	}
 
 	channel <- true
@@ -40,14 +42,16 @@ func validateIfKey2False(value map[string]bool) bool {
 	return key
 }
 
-func validateIfKey2FalseChannel(value map[string]bool, channel chan bool, exit chan bool) {
+func validateIfKey2FalseChannel(value map[string]bool, channel chan bool) {
 	time.Sleep(1 * time.Second)
 	key, ok := value["2"]
 	if !ok {
-		exit <- false
+		channel <- false
+		return
 	}
 	if !key {
-		exit <- false
+		channel <- false
+		return
 	}
 	channel <- true
 }
@@ -61,14 +65,16 @@ func validateIfKey3False(value map[string]bool) bool {
 	return key
 }
 
-func validateIfKey3FalseChannel(value map[string]bool, channel chan bool, exit chan bool) {
+func validateIfKey3FalseChannel(value map[string]bool, channel chan bool) {
 	time.Sleep(1 * time.Second)
 	key, ok := value["3"]
 	if !ok {
-		exit <- false
+		channel <- false
+		return
 	}
 	if !key {
-		exit <- false
+		channel <- false
+		return
 	}
 	channel <- true
 }
@@ -82,14 +88,16 @@ func validateIfKey4False(value map[string]bool) bool {
 	return key
 }
 
-func validateIfKey4FalseChannel(value map[string]bool, channel chan bool, exit chan bool) {
+func validateIfKey4FalseChannel(value map[string]bool, channel chan bool) {
 	time.Sleep(4 * time.Second)
 	key, ok := value["4"]
 	if !ok {
-		exit <- false
+		channel <- false
+		return
 	}
 	if !key {
-		exit <- false
+		channel <- false
+		return
 	}
 	channel <- true
 }
@@ -126,10 +134,10 @@ func Goroutine(c *gin.Context, channel chan bool, exit chan bool, result *bool, 
 	var hashMap map[string]bool
 	json.NewDecoder(c.Request.Body).Decode(&hashMap)
 
-	go validateIfKey1FalseChannel(hashMap, channel, exit)
-	go validateIfKey2FalseChannel(hashMap, channel, exit)
-	go validateIfKey3FalseChannel(hashMap, channel, exit)
-	go validateIfKey4FalseChannel(hashMap, channel, exit)
+	go validateIfKey1FalseChannel(hashMap, channel)
+	go validateIfKey2FalseChannel(hashMap, channel)
+	go validateIfKey3FalseChannel(hashMap, channel)
+	go validateIfKey4FalseChannel(hashMap, channel)
 	count := 0
 
 	go func(channel chan bool, exit chan bool, result *bool, wg *sync.WaitGroup) {
@@ -140,11 +148,12 @@ func Goroutine(c *gin.Context, channel chan bool, exit chan bool, result *bool, 
 
 				if success {
 					count += 1
+				} else {
+					close(exit)
 				}
 				if count == 4 {
 					close(exit)
 				}
-
 			case _, status := <-exit:
 				fmt.Println(status)
 				if count != 4 {
